@@ -77,6 +77,28 @@ class ProductService
         DB::table('product')->where('id', '=', $id)->delete();
     }
 
+    /**-----------
+     * 
+     * function delete product
+     * 
+     -------------------*/
+
+    public function AddToppingProduct(array $Topping, int $IdProduct)
+    {
+        $CheckTopping = $this->CheckArray($Topping);
+        if ($CheckTopping !== 1) {
+            return $CheckTopping;
+        }
+        for ($KeyTopping = 0; $KeyTopping < count($Topping); $KeyTopping++) {
+            DB::table('product_topping')
+                ->insert([
+                    'product_id' => $IdProduct,
+                    'topping_id' => $KeyTopping[$KeyTopping]
+                ]);
+        }
+        return 1;
+    }
+
 
     /**-----------
      * 
@@ -208,7 +230,7 @@ class ProductService
     /**-----------
      * 
      * function check name product
-     * 
+     * string name
      * 
      -------------------*/
     public function CheckName(string $Name)
@@ -223,7 +245,7 @@ class ProductService
     /**-----------
      * 
      * function Add check Validator
-     * 
+     * array: Size, array: Topping
      -------------------*/
     public function CheckSizeAndTopping(array $Size, array $Topping)
     {
@@ -240,5 +262,21 @@ class ProductService
             }
         }
         return 1;
+    }
+
+    /**-----------
+     * 
+     * function Add check Validator
+     * string name
+     -------------------*/
+    public function FindProduct(string $Name)
+    {
+        $data = DB::table('product as p')
+            ->join('product_type as pt', 'pt.id', 'p.product_type_id')
+            ->select('p.name as name_product', 'pt.name as name_product_type', 'image')
+            ->where('p.name', 'LIKE', '%' . $Name . '%')
+            ->orderBy('p.name', 'asc')
+            ->get();
+        return $data;
     }
 }

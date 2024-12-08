@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Mockery;
 use Mockery\Mock;
 use Tests\TestCase;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 class ProductControllerTest extends TestCase
 {
@@ -145,7 +146,7 @@ class ProductControllerTest extends TestCase
         // Thiết lập expectation cho AddProduct
         $mockedService->shouldReceive('AddProduct')
             ->once()
-            ->with('New product', 1, [1, 2], [1], 'image.jpg', [10000, 20000])
+            ->with('New product', 1, [1, 2], [1], 'default.jpg', [10000, 20000]) // sử dụng 'default.jpg' như trong controller
             ->andReturn(1);
 
         // Tạo controller với mock
@@ -158,7 +159,7 @@ class ProductControllerTest extends TestCase
             'Size' => [1, 2],
             'Topping' => [1],
             'Price' => [10000, 20000],
-            'Image' => 'image.jpg'
+            // Không thêm 'image' để sử dụng 'default.jpg' trong controller
         ]);
 
         // Gọi phương thức Add
@@ -168,5 +169,119 @@ class ProductControllerTest extends TestCase
         // Kiểm tra các giá trị trả về
         $this->assertEquals(200, $response->status());
         $this->assertEquals('success', $responseData['status']);
+    }
+
+
+
+
+    /**
+     * Test trường hợp AddTopping lỗi.
+     *
+     * @return void
+     */
+
+    public function test_add_topping_error()
+    {
+        $mockedService = Mockery::mock(ProductService::class);
+
+        $controller = new ProductController($mockedService);
+        $request = new Request([
+            'Topping' => [],
+            'IdProduct' => 1
+        ]);
+
+        $response = $controller->AddTopping($request);
+        $responseData = $response->getData(true);
+        // Kiểm tra các giá trị trả về
+        $this->assertEquals(400, $response->status());
+        $this->assertEquals('error', $responseData['status']);
+        $this->assertEquals('Please choose toppings', $responseData['errors']);
+    }
+
+    /**
+     * Test trường hợp AddTopping thành công.
+     *
+     * @return void
+     */
+    public function test_add_topping()
+    {
+        $mockedService = Mockery::mock(ProductService::class);
+        $mockedService->shouldReceive('AddToppingProduct')->once()->with([1, 2], 1)->andReturn(1);
+
+        $controller = new ProductController($mockedService);
+        $request = new Request([
+            'Topping' => [1, 2],
+            'IdProduct' => 1
+        ]);
+
+        $response = $controller->AddTopping($request);
+        $responseData = $response->getData(true);
+        // Kiểm tra các giá trị trả về
+        $this->assertEquals(200, $response->status());
+        $this->assertEquals('success', $responseData['status']);
+    }
+
+
+    /**
+     * Test trường hợp Find error.
+     *
+     * @return void
+     */
+    public function test_find_error()
+    {
+        $mockedService = Mockery::mock(ProductService::class);
+        $controller = new ProductController($mockedService);
+        $request = new Request([]);
+
+        $response = $controller->Find($request);
+        $responseData = $response->getData(true);
+        // Kiểm tra các giá trị trả về
+        $this->assertEquals(400, $response->status());
+        $this->assertEquals('error', $responseData['status']);
+        $this->assertEquals('Please enter the character you want to find.', $responseData['errors']);
+    }
+
+
+    /**
+     * Test trường hợp Find thành công.
+     *
+     * @return void
+     */
+    public function test_find()
+    {
+        // Mock ProductService
+        $mockedService = Mockery::mock(ProductService::class);
+
+        // Thiết lập mock cho phương thức FindProduct
+        $mockedService->shouldReceive('FindProduct')
+            ->once()
+            ->with('ame')
+            ->andReturn([
+                'name_product' => 'Name Product',
+                'name_product_type' => 'Name Type',
+                'image' => 'img1'
+            ]);
+
+        // Inject mock service vào controller
+        $controller = new ProductController($mockedService);
+
+        // Tạo request với từ khóa tìm kiếm 'ame'
+        $request = new Request([
+            'Name' => 'ame'
+        ]);
+
+        // Gọi hàm Find của controller
+        $response = $controller->Find($request);
+
+        // Lấy dữ liệu từ response
+        $responseData = $response->getData(true);
+
+        // Kiểm tra kết quả trả về
+        $this->assertEquals('success', $responseData['status']);
+        $this->assertEquals([
+            'name_product' => 'Name Product',
+            'name_product_type' => 'Name Type',
+            'image' => 'img1'
+        ], $responseData['data']);
     }
 }
